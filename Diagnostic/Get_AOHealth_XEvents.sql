@@ -7,7 +7,7 @@ NOTES:
 TABLES OUTPUT
 ==============
     TempDB.dbo.#error_reported	      --used for stats of error/info messages
-    TempDB.dbo.#AOHealth_XELData      --imported Xevents from AlwaysOn_Health_*.XEL files
+    TempDB.dbo.#AOHealth_XELData      --imported Xevents from AlwaysOn_health_*.XEL files
 
 CHANGE HISTORY:
 ---------------------------
@@ -23,19 +23,19 @@ CHANGE HISTORY:
 2017/01/18	Initial revision
 ======================================================================*/
 SET NOCOUNT ON
-USE [TempDB]
+USE [tempdb]
 GO
 
 DECLARE @XELTarget VARCHAR(MAX);
 DECLARE @XELPath VARCHAR(MAX);
 DECLARE @XELFile VARCHAR(max);
 
-IF EXISTS(SELECT name FROM sys.dm_xe_sessions WHERE name = 'AlwaysOn_Health') BEGIN
+IF EXISTS(SELECT name FROM sys.dm_xe_sessions WHERE name = 'AlwaysOn_health') BEGIN
 	SELECT @XELTarget = cast(xet.target_data AS XML).value('(EventFileTarget/File/@name)[1]', 'VARCHAR(MAX)') 
 		FROM sys.dm_xe_sessions xes
 		INNER JOIN sys.dm_xe_session_targets xet
 		ON xes.address = xet.event_session_address
-		WHERE xet.target_name = 'event_file' and xes.name = 'AlwaysOn_Health'
+		WHERE xet.target_name = 'event_file' and xes.name = 'AlwaysOn_health'
 
 	SELECT @XELPath = REVERSE(SUBSTRING(REVERSE(@XELTarget), 
 			CHARINDEX('\', reverse(@XELTarget)), 
@@ -43,7 +43,7 @@ IF EXISTS(SELECT name FROM sys.dm_xe_sessions WHERE name = 'AlwaysOn_Health') BE
 
 	SELECT @XELFile = @XELPath + 'AlwaysOn_health*.xel'
 	IF @XELFile IS NULL BEGIN
-		PRINT 'Unable to find XEVent target files for AlwaysOn_Health XEvent session'
+		PRINT 'Unable to find XEVent target files for AlwaysOn_health XEvent session'
 		PRINT 'Expected AOHealth XEvent files in this location:'
 		PRINT @XELPath
 		RETURN
@@ -326,11 +326,11 @@ INSERT INTO #AOHealthSummary
 SELECT CAST(xv.event_name AS VARCHAR(50)), 0
 	FROM sys.dm_xe_sessions xes
 	INNER JOIN sys.dm_xe_session_events xv ON xes.address = xv.event_session_address
-	WHERE xes.name like 'AlwaysOn_Health'
+	WHERE xes.name like 'AlwaysOn_health'
 	ORDER BY event_name;
 
-With Summary (XEvent, [Count])
-AS (SELECT CAST(object_name AS VARCHAR(50)) AS [XEvent], count(*) AS [Count] 
+With Summary (XEvent, [COUNT])
+AS (SELECT CAST(object_name AS VARCHAR(50)) AS [XEvent], count(*) AS [COUNT] 
 	FROM #AOHealth_XELData
 	GROUP BY object_name)
 UPDATE #AOHealthSummary
@@ -343,7 +343,7 @@ IF EXISTS(SELECT * FROM #AOHealthSummary) BEGIN
 	PRINT '==========================================';
 	-- Display event counts for AO Health XEvent data
 	SELECT * FROM #AOHealthSummary
-	ORDER BY [count] DESC, XEvent
+	ORDER BY [COUNT] DESC, XEvent
 END
 
 DROP TABLE #AOHealth_XELData
